@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.0] - Unreleased
+
+### Added
+- `DeduplicationGatherers.distinctBy(keyFn)` — keeps the first element seen per key. Sequential.
+
 ## [1.0.1] - 2026-05-03
 
 ### Added
