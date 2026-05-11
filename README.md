@@ -85,6 +85,21 @@ Stream.of(new Person("Alice", 30), new Person("Bob", 25), new Person("Alice", 40
 
 Runs sequentially even on parallel streams. The combiner can only merge *state*, not already-emitted elements — two chunks would each emit their own first-seen element for the same key, leaving duplicates the combiner can't undo. So `distinctBy` stays sequential.
 
+### `IndexGatherers.zipWithIndex()`
+
+Pairs each element with its zero-based position in the stream.
+
+```java
+Stream.of("a", "b", "c")
+      .gather(IndexGatherers.zipWithIndex())
+      .forEach(System.out::println);
+// Indexed[index=0, value=a]
+// Indexed[index=1, value=b]
+// Indexed[index=2, value=c]
+```
+
+Runs sequentially even on parallel streams. Index reflects encounter order in the original stream, which can't be reconstructed once parallel chunks split the work.
+
 ## License
 
 Apache 2.0

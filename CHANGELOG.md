@@ -4,6 +4,7 @@
 
 ### Added
 - `DeduplicationGatherers.distinctBy(keyFn)` — keeps the first element seen per key. Sequential.
+- `IndexGatherers.zipWithIndex()` — pairs each element with its zero-based position. Sequential. Output type: `Indexed<T>(long index, T value)`.
 
 ## [1.0.1] - 2026-05-03
 
