@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.1] - Unreleased
+
+### Dependencies
+- Bumped JUnit Jupiter 5.12.0 → 6.0.3.
+- Bumped AssertJ 3.27.3 → 3.27.7.
+- Bumped maven-compiler-plugin 3.13.0 → 3.15.0.
+- Bumped maven-surefire-plugin 3.5.2 → 3.5.5.
+- Bumped maven-source-plugin 3.3.0 → 3.4.0.
+- Bumped central-publishing-maven-plugin 0.7.0 → 0.10.0.
+
 ## [1.1.0] - 2026-05-11
 
 ### Added
