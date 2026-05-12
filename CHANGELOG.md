@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.1.1] - Unreleased
+## [1.1.1] - 2026-05-12
 
 ### Dependencies
 - Bumped JUnit Jupiter 5.12.0 → 6.0.3.
