@@ -100,6 +100,29 @@ Stream.of("a", "b", "c")
 
 Runs sequentially even on parallel streams. Index reflects encounter order in the original stream, which can't be reconstructed once parallel chunks split the work.
 
+### `ConsecutiveGatherers.distinctUntilChanged(keyFn)` / `distinctConsecutive()`
+
+Drops *consecutive* duplicates only — a value may reappear later. Unlike `Stream.distinct()`, which removes all duplicates regardless of position.
+
+```java
+record Reading(int id, String status) {}
+
+Stream.of(new Reading(1, "ok"), new Reading(2, "ok"),
+          new Reading(3, "err"), new Reading(4, "ok"))
+      .gather(ConsecutiveGatherers.distinctUntilChanged(Reading::status))
+      .forEach(System.out::println);
+// Reading[id=1, status=ok]
+// Reading[id=3, status=err]
+// Reading[id=4, status=ok]
+
+Stream.of("a", "a", "b", "b", "b", "a")
+      .gather(ConsecutiveGatherers.distinctConsecutive())
+      .forEach(System.out::println);
+// a, b, a
+```
+
+Runs sequentially even on parallel streams — "differs from the previous element" depends on encounter order, which parallel chunks can't preserve.
+
 ## License
 
 Apache 2.0
