@@ -146,6 +146,21 @@ Stream.of(1, 1, 2, 2, 2, 3, 1)
 
 Runs sequentially even on parallel streams — run boundaries depend on encounter order, which parallel chunks can't preserve.
 
+### `ConsecutiveGatherers.splitOn(predicate)`
+
+Splits the stream into lists at separator elements (the matching element is dropped). Leading, trailing, and consecutive separators each produce an empty list.
+
+```java
+Stream.of("a", "b", "", "c", "d", "", "e")
+      .gather(ConsecutiveGatherers.splitOn(String::isEmpty))
+      .forEach(System.out::println);
+// [a, b]
+// [c, d]
+// [e]
+```
+
+Runs sequentially even on parallel streams — segment boundaries depend on encounter order, which parallel chunks can't preserve.
+
 ## License
 
 Apache 2.0

@@ -211,4 +211,85 @@ class ConsecutiveGatherersTest {
                         List.of(1)
                 );
     }
+
+    @Test
+    void splitOnEmptyStreamProducesNoOutput() {
+        Assertions.assertThat(Stream.<String>of()
+                .gather(ConsecutiveGatherers.splitOn(String::isEmpty)))
+                .isEmpty();
+    }
+
+    @Test
+    void splitOnNoSeparatorsYieldsSingleGroup() {
+        Assertions.assertThat(Stream.of("a", "b", "c")
+                .gather(ConsecutiveGatherers.splitOn(String::isEmpty)))
+                .containsExactly(List.of("a", "b", "c"));
+    }
+
+    @Test
+    void splitOnDropsSeparators() {
+        Assertions.assertThat(Stream.of("a", "b", "", "c", "d", "", "e")
+                .gather(ConsecutiveGatherers.splitOn(String::isEmpty)))
+                .containsExactly(
+                        List.of("a", "b"),
+                        List.of("c", "d"),
+                        List.of("e")
+                );
+    }
+
+    @Test
+    void splitOnLeadingSeparatorYieldsLeadingEmptyGroup() {
+        Assertions.assertThat(Stream.of("", "a", "b")
+                .gather(ConsecutiveGatherers.splitOn(String::isEmpty)))
+                .containsExactly(List.of(), List.of("a", "b"));
+    }
+
+    @Test
+    void splitOnTrailingSeparatorYieldsTrailingEmptyGroup() {
+        Assertions.assertThat(Stream.of("a", "b", "")
+                .gather(ConsecutiveGatherers.splitOn(String::isEmpty)))
+                .containsExactly(List.of("a", "b"), List.of());
+    }
+
+    @Test
+    void splitOnConsecutiveSeparatorsYieldEmptyGroupsBetween() {
+        Assertions.assertThat(Stream.of("a", "", "", "b")
+                .gather(ConsecutiveGatherers.splitOn(String::isEmpty)))
+                .containsExactly(List.of("a"), List.of(), List.of("b"));
+    }
+
+    @Test
+    void splitOnAllSeparators() {
+        Assertions.assertThat(Stream.of("", "")
+                .gather(ConsecutiveGatherers.splitOn(String::isEmpty)))
+                .containsExactly(List.of(), List.of(), List.of());
+    }
+
+    @Test
+    void splitOnEarlierGroupsNotMutatedByLaterGroups() {
+        List<List<String>> result = Stream.of("a", "a", "", "b", "", "c", "c")
+                .gather(ConsecutiveGatherers.splitOn(String::isEmpty))
+                .toList();
+
+        Assertions.assertThat(result).containsExactly(
+                List.of("a", "a"),
+                List.of("b"),
+                List.of("c", "c")
+        );
+    }
+
+    @Test
+    void splitOnShortCircuitDownstream() {
+        Assertions.assertThat(Stream.iterate(0, i -> i + 1)
+                .gather(ConsecutiveGatherers.splitOn(i -> i % 3 == 0))
+                .limit(3))
+                .hasSize(3);
+    }
+
+    @Test
+    void splitOnParallelStreamRunsSequentially() {
+        Assertions.assertThat(Stream.of("a", "", "b", "", "c").parallel()
+                .gather(ConsecutiveGatherers.splitOn(String::isEmpty)))
+                .containsExactly(List.of("a"), List.of("b"), List.of("c"));
+    }
 }
