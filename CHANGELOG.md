@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.2.0] - Unreleased
+## [1.2.0] - 2026-05-19
 
 ### Added
 - `ConsecutiveGatherers.distinctUntilChanged(keyFn)` — drops consecutive same-key elements. Sequential.
