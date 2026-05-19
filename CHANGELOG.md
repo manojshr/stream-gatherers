@@ -7,6 +7,7 @@
 - `ConsecutiveGatherers.distinctConsecutive()` — drops consecutive equal elements. Sequential.
 - `ConsecutiveGatherers.runsBy(keyFn)` — groups consecutive same-key elements into lists. Sequential.
 - `ConsecutiveGatherers.runs()` — groups consecutive equal elements into lists. Sequential.
+- `ConsecutiveGatherers.splitOn(predicate)` — splits into lists at separator elements, dropping them. Empty segments preserved. Sequential.
 
 ## [1.1.1] - 2026-05-12
 

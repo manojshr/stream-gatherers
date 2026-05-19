@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Gatherer;
 
@@ -202,5 +203,78 @@ public class ConsecutiveGatherers {
      */
     public static <T> Gatherer<T, ?, List<T>> runs() {
         return runsBy(Function.identity());
+    }
+
+    private static final class Split<T> {
+        private List<T> buffer = new ArrayList<>();
+        private boolean started;
+
+        void start() {
+            started = true;
+        }
+
+        void add(T element) {
+            buffer.add(element);
+        }
+
+        List<T> flush() {
+            List<T> completed = buffer;
+            buffer = new ArrayList<>();
+            return completed;
+        }
+
+        boolean started() {
+            return started;
+        }
+    }
+
+    /**
+     * Splits the stream into lists at every element matching {@code predicate}.
+     * The matching element is a separator and is not included in any list.
+     *
+     * <p>Empty segments are preserved: leading, trailing, and consecutive
+     * separators each produce an empty list. A completely empty input stream
+     * produces no output.
+     *
+     * <p>This gatherer runs sequentially even when the upstream stream is parallel
+     *
+     * <p>Example:
+     * {@snippet :
+     * Stream.of("a", "b", "", "c", "d", "", "e")
+     *       .gather(ConsecutiveGatherers.splitOn(String::isEmpty))
+     *       .forEach(System.out::println);
+     * // [a, b]
+     * // [c, d]
+     * // [e]
+     * }
+     *
+     * @param predicate identifies separator elements
+     * @param <T>       element type
+     * @return a sequential gatherer emitting one list per segment between separators
+     * @since 1.2.0
+     */
+    public static <T> Gatherer<T, ?, List<T>> splitOn(Predicate<? super T> predicate) {
+        Supplier<Split<T>> initializer = Split::new;
+
+        Gatherer.Integrator<Split<T>, T, List<T>> integrator = (state, element, downstream) -> {
+            state.start();
+            if (predicate.test(element)) {
+                return downstream.push(state.flush());
+            }
+            state.add(element);
+            return true;
+        };
+
+        BiConsumer<Split<T>, Gatherer.Downstream<? super List<T>>> finisher = (state, downstream) -> {
+            if (state.started() && !downstream.isRejecting()) {
+                downstream.push(state.flush());
+            }
+        };
+
+        return Gatherer.ofSequential(
+                initializer,
+                integrator,
+                finisher
+        );
     }
 }
