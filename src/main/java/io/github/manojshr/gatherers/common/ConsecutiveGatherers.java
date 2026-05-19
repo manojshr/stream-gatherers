@@ -1,6 +1,9 @@
 package io.github.manojshr.gatherers.common;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Gatherer;
@@ -86,5 +89,118 @@ public class ConsecutiveGatherers {
      */
     public static <T> Gatherer<T, ?, T> distinctConsecutive() {
         return distinctUntilChanged(Function.identity());
+    }
+
+    private static final class Run<T, K> {
+        private List<T> elements = new ArrayList<>();
+        private K key;
+
+        boolean isEmpty() {
+            return elements.isEmpty();
+        }
+
+        boolean matches(K candidate) {
+            return candidate.equals(key);
+        }
+
+        void openWith(T element, K elementKey) {
+            elements.add(element);
+            key = elementKey;
+        }
+
+        void add(T element) {
+            elements.add(element);
+        }
+
+        List<T> flush() {
+            // swap in a fresh list so the returned one can't be mutated after it's pushed
+            List<T> completed = elements;
+            elements = new ArrayList<>();
+            return completed;
+        }
+    }
+
+    /**
+     * Groups maximal runs of consecutive elements that produce an equal key.
+     * Each run is emitted as a {@code List} when the key changes; the final
+     * run is emitted when the stream ends.
+     *
+     * <p>This gatherer runs sequentially even when the upstream stream is
+     * parallel — run boundaries depend on encounter order, which cannot be
+     * preserved across parallel chunks.
+     *
+     * <p>Example:
+     * {@snippet :
+     * Stream.of("a", "a", "b", "b", "b", "a")
+     *       .gather(ConsecutiveGatherers.runsBy(s -> s))
+     *       .forEach(System.out::println);
+     * // [a, a]
+     * // [b, b, b]
+     * // [a]
+     * }
+     *
+     * @param keyFn extracts the key used for equality; must not return {@code null}
+     * @param <T>   element type
+     * @param <K>   key type
+     * @return a sequential gatherer emitting one list per run of equal-key elements
+     * @throws NullPointerException if {@code keyFn} returns {@code null} for any element
+     * @since 1.2.0
+     */
+    public static <T, K> Gatherer<T, ?, List<T>> runsBy(Function<? super T, ? extends K> keyFn) {
+        Supplier<Run<T, K>> initializer = Run::new;
+
+        Gatherer.Integrator<Run<T, K>, T, List<T>> integrator = (state, element, downstream) -> {
+            K key = keyFn.apply(element);
+            Objects.requireNonNull(key, "keyFn returned null");
+
+            if (state.isEmpty()) {
+                state.openWith(element, key);
+                return true;
+            }
+            if (state.matches(key)) {
+                state.add(element);
+                return true;
+            }
+            boolean ok = downstream.push(state.flush());
+            state.openWith(element, key);
+            return ok;
+        };
+
+        BiConsumer<Run<T, K>, Gatherer.Downstream<? super List<T>>> finisher = (state, downstream) -> {
+            if (!state.isEmpty() && !downstream.isRejecting()) {
+                downstream.push(state.flush());
+            }
+        };
+
+        return Gatherer.ofSequential(
+                initializer,
+                integrator,
+                finisher
+        );
+    }
+
+    /**
+     * Groups maximal runs of consecutive equal elements (by {@code equals})
+     * into lists. Same as {@link #runsBy} with the identity function.
+     *
+     * <p>This gatherer runs sequentially even when the upstream stream is parallel.
+     *
+     * <p>Example:
+     * {@snippet :
+     * Stream.of(1, 1, 2, 2, 2, 3, 1)
+     *       .gather(ConsecutiveGatherers.runs())
+     *       .forEach(System.out::println);
+     * // [1, 1]
+     * // [2, 2, 2]
+     * // [3]
+     * // [1]
+     * }
+     *
+     * @param <T> element type
+     * @return a sequential gatherer emitting one list per run of equal elements
+     * @since 1.2.0
+     */
+    public static <T> Gatherer<T, ?, List<T>> runs() {
+        return runsBy(Function.identity());
     }
 }
