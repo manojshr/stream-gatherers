@@ -3,6 +3,7 @@ package io.github.manojshr.gatherers.common;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.stream.Stream;
 
 class ConsecutiveGatherersTest {
@@ -111,5 +112,103 @@ class ConsecutiveGatherersTest {
         Assertions.assertThat(Stream.of(1, 1, 2, 1, 1, 2, 2)
                 .gather(ConsecutiveGatherers.distinctConsecutive()))
                 .containsExactly(1, 2, 1, 2);
+    }
+
+    @Test
+    void runsByEmpty() {
+        Assertions.assertThat(Stream.<Reading>of()
+                .gather(ConsecutiveGatherers.runsBy(Reading::status)))
+                .isEmpty();
+    }
+
+    @Test
+    void runsBySingle() {
+        Assertions.assertThat(Stream.of(new Reading(1, "ok"))
+                .gather(ConsecutiveGatherers.runsBy(Reading::status)))
+                .containsExactly(List.of(new Reading(1, "ok")));
+    }
+
+    @Test
+    void runsByGroupsConsecutiveSameKey() {
+        Assertions.assertThat(Stream.of("a", "a", "b", "b", "b", "a")
+                .gather(ConsecutiveGatherers.runsBy(s -> s)))
+                .containsExactly(
+                        List.of("a", "a"),
+                        List.of("b", "b", "b"),
+                        List.of("a")
+                );
+    }
+
+    @Test
+    void runsByAllSameKey() {
+        Assertions.assertThat(Stream.of("a", "a", "a")
+                .gather(ConsecutiveGatherers.runsBy(s -> s)))
+                .containsExactly(List.of("a", "a", "a"));
+    }
+
+    @Test
+    void runsByAllDifferentKeys() {
+        Assertions.assertThat(Stream.of("a", "b", "c")
+                .gather(ConsecutiveGatherers.runsBy(s -> s)))
+                .containsExactly(List.of("a"), List.of("b"), List.of("c"));
+    }
+
+    @Test
+    void runsByEarlierRunsNotMutatedByLaterRuns() {
+        List<List<String>> result = Stream.of("a", "a", "b", "c", "c", "c")
+                .gather(ConsecutiveGatherers.runsBy(s -> s))
+                .toList();
+
+        Assertions.assertThat(result).containsExactly(
+                List.of("a", "a"),
+                List.of("b"),
+                List.of("c", "c", "c")
+        );
+    }
+
+    @Test
+    void runsByShortCircuitDownstream() {
+        Assertions.assertThat(Stream.iterate(0, i -> i + 1)
+                .gather(ConsecutiveGatherers.runsBy(i -> i / 2))
+                .limit(3))
+                .hasSize(3);
+    }
+
+    @Test
+    void runsByOnParallelStreamRunsSequentially() {
+        Assertions.assertThat(Stream.of("a", "a", "b", "b", "c").parallel()
+                .gather(ConsecutiveGatherers.runsBy(s -> s)))
+                .containsExactly(
+                        List.of("a", "a"),
+                        List.of("b", "b"),
+                        List.of("c")
+                );
+    }
+
+    @Test
+    void runsByThrowsOnNullKey() {
+        Assertions.assertThatNullPointerException()
+                .isThrownBy(() -> Stream.of("a", "b")
+                        .gather(ConsecutiveGatherers.runsBy(s -> (String) null))
+                        .toList());
+    }
+
+    @Test
+    void runsEmpty() {
+        Assertions.assertThat(Stream.<Integer>of()
+                .gather(ConsecutiveGatherers.runs()))
+                .isEmpty();
+    }
+
+    @Test
+    void runsGroupsConsecutiveEqual() {
+        Assertions.assertThat(Stream.of(1, 1, 2, 2, 2, 3, 1)
+                .gather(ConsecutiveGatherers.runs()))
+                .containsExactly(
+                        List.of(1, 1),
+                        List.of(2, 2, 2),
+                        List.of(3),
+                        List.of(1)
+                );
     }
 }

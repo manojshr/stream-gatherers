@@ -123,6 +123,29 @@ Stream.of("a", "a", "b", "b", "b", "a")
 
 Runs sequentially even on parallel streams — "differs from the previous element" depends on encounter order, which parallel chunks can't preserve.
 
+### `ConsecutiveGatherers.runsBy(keyFn)` / `runs()`
+
+Groups maximal runs of consecutive elements sharing a key into lists. The same key can start a new run later.
+
+```java
+Stream.of("a", "a", "b", "b", "b", "a")
+      .gather(ConsecutiveGatherers.runsBy(s -> s))
+      .forEach(System.out::println);
+// [a, a]
+// [b, b, b]
+// [a]
+
+Stream.of(1, 1, 2, 2, 2, 3, 1)
+      .gather(ConsecutiveGatherers.runs())
+      .forEach(System.out::println);
+// [1, 1]
+// [2, 2, 2]
+// [3]
+// [1]
+```
+
+Runs sequentially even on parallel streams — run boundaries depend on encounter order, which parallel chunks can't preserve.
+
 ## License
 
 Apache 2.0
